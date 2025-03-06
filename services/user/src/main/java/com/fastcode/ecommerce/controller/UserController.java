@@ -9,6 +9,7 @@ import com.fastcode.ecommerce.model.dto.response.UserResponse;
 import com.fastcode.ecommerce.service.UserService;
 import com.fastcode.ecommerce.utils.validation.PagingUtil;
 import com.fastcode.ecommerce.utils.validation.SortingUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -89,7 +90,7 @@ public class UserController {
 
     @PutMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<CommonResponse<UserResponse>> updatedUser(@RequestBody UserRequest request){
+    public ResponseEntity<CommonResponse<UserResponse>> updatedUser(@Valid @RequestBody UserRequest request){
         UserResponse user = userService.updatePut(request);
 
         CommonResponse<UserResponse> response = CommonResponse.<UserResponse>builder()
@@ -106,7 +107,7 @@ public class UserController {
 
     @PatchMapping
     @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<CommonResponse<UserResponse>> updatedUserPartially(@RequestBody UserRequest request){
+    public ResponseEntity<CommonResponse<UserResponse>> updatedUserPartially(@Valid @RequestBody UserRequest request){
         UserResponse user = userService.updatePatch(request);
 
         CommonResponse<UserResponse> response = CommonResponse.<UserResponse>builder()
