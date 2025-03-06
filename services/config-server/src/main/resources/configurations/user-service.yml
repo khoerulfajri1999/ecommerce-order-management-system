@@ -1,0 +1,21 @@
+server:
+  port: 8090
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/user
+    username: fastcode
+    password: 12345
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+app:
+  fastcode:
+    jwt:
+      jwt-secret: byH8Rd8FgnjKlxlNXY5vyn3oIkV+KY2dida4OYZFaCFyB3CI06ERaWBMg1eRZmMEqeofjILhDeJA2ag66MQ/Eg==
+      app-name: ecommerce
+      expired: 3600000  # dalam milidetik (1 jam)
