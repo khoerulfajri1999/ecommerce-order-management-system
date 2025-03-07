@@ -2,7 +2,9 @@ package com.fastcode.ecommerce.service.impl;
 
 import com.fastcode.ecommerce.model.dto.request.SearchRequest;
 import com.fastcode.ecommerce.model.dto.request.UserRequest;
+import com.fastcode.ecommerce.model.dto.response.JwtClaims;
 import com.fastcode.ecommerce.model.dto.response.UserResponse;
+import com.fastcode.ecommerce.model.dto.response.UserResponseByToken;
 import com.fastcode.ecommerce.model.entity.User;
 import com.fastcode.ecommerce.model.entity.UserAccount;
 import com.fastcode.ecommerce.repository.UserAccountRepository;
@@ -28,6 +30,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserAccountRepository userAccountRepository;
     private final UserMapper userMapper;
+    private final JwtServiceImpl jwtService;
     @Override
     public UserResponse create(UserRequest userRequest) {
         User user = userMapper.requestToEntity(userRequest);
@@ -111,8 +114,27 @@ public class UserServiceImpl implements UserService {
         return userMapper.entityToResponse(userRepository.saveAndFlush(existingUser));
     }
 
+    @Override
+    public UserResponseByToken getUserByToken(String token) {
+        JwtClaims jwtClaims = jwtService.getClaimsByToken(token);
+        User user = findByUserAccountIdOrThrowNotFound(jwtClaims.getUserAccountId());
+        return UserResponseByToken.builder()
+                .id(user.getId())
+                .username(user.getUserAccount().getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .roles(user.getUserAccount().getRoles().stream().map(role -> role.getRole().name()).toList())
+                .build();
+    }
+
     private User findByIdOrThrowNotFound(String id){
         return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found")
+                );
+    }
+
+    private User findByUserAccountIdOrThrowNotFound(String id){
+        return userRepository.findByUserAccountId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found")
                 );
     }

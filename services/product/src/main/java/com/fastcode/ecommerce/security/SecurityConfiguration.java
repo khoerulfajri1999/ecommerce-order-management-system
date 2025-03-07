@@ -1,9 +1,10 @@
-package com.fastcode.ecommerce.scurity;
+package com.fastcode.ecommerce.security;
 
 import jakarta.servlet.DispatcherType;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -18,29 +19,30 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @EnableMethodSecurity
 @AllArgsConstructor
 public class SecurityConfiguration {
-    private final CorsConfigurationSource corsConfigurationSource;
     private final AuthenticationFilter authenticationFilter;
     private final AccessDeniedHandlerImpl accessDeniedHandler;
-    private final AuthenticationEntryPointImpl authenticationEntryPoint;
+    private final AuthenticationEntryPointImpl authenticationEntryPointHandler;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+
         return httpSecurity
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .exceptionHandling(cfg -> {
                     cfg.accessDeniedHandler(accessDeniedHandler);
-                    cfg.authenticationEntryPoint(authenticationEntryPoint);
+                    cfg.authenticationEntryPoint(authenticationEntryPointHandler);
                 })
                 .sessionManagement(cfg -> cfg.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(req -> req
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/users/me").permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers(HttpMethod.GET ,"/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET ,"/api/v1/categories/**").permitAll()
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
-

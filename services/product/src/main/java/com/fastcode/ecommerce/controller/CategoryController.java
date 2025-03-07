@@ -5,11 +5,11 @@ import com.fastcode.ecommerce.model.dto.request.CategoryRequest;
 import com.fastcode.ecommerce.model.dto.response.CategoryResponse;
 import com.fastcode.ecommerce.model.dto.response.CommonResponse;
 import com.fastcode.ecommerce.service.CategoryService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +22,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-//    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<CategoryResponse>> addNewCategory(@Valid @RequestBody CategoryRequest request) {
         CategoryResponse category = categoryService.create(request);
 
@@ -39,7 +39,6 @@ public class CategoryController {
     }
 
     @GetMapping
-//    @PreAuthorize("hasAnyAuthority('ADMIN', 'CUSTOMER')")
     public ResponseEntity<CommonResponse<List<CategoryResponse>>> getAllCategory() {
 
         List<CategoryResponse> categories = categoryService.getAll();
@@ -57,6 +56,7 @@ public class CategoryController {
     }
 
     @PutMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<CategoryResponse>> updateCategory(@Valid @RequestBody CategoryRequest payload) {
         CategoryResponse category = categoryService.updatePut(payload);
         CommonResponse<CategoryResponse> response = CommonResponse.<CategoryResponse>builder()
@@ -71,7 +71,6 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-//    @PreAuthorize("hasAnyAuthority('ADMIN', 'CUSTOMER')")
     public ResponseEntity<CommonResponse<CategoryResponse>> getCategoryById (@PathVariable String id) {
 
         CategoryResponse category = categoryService.getById(id);
@@ -90,7 +89,7 @@ public class CategoryController {
 
 
     @DeleteMapping("{id}")
-//    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<String>> deleteById(@PathVariable String id){
         categoryService.deleteById(id);
 

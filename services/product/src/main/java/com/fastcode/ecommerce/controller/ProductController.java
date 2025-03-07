@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommonResponse<ProductResponse>> addNewProduct(@Valid @RequestBody ProductRequest payload) {
         ProductResponse product = productService.create(payload);
         CommonResponse<ProductResponse> response = CommonResponse.<ProductResponse>builder()
@@ -39,7 +41,6 @@ public class ProductController {
     }
 
     @GetMapping
-//    @PreAuthorize("hasAnyAuthority('ADMIN', 'CUSTOMER')")
     public ResponseEntity<CommonResponse<List<ProductResponse>>> getAllProduct(
             @RequestParam (name = "search",required = false) String search,
             @RequestParam(required = false,defaultValue = "1") String page,
@@ -97,6 +98,7 @@ public class ProductController {
     }
 
     @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommonResponse<ProductResponse>> updateProduct(@Valid @RequestBody ProductRequest payload) {
         ProductResponse product = productService.updatePut(payload);
         CommonResponse<ProductResponse> response = CommonResponse.<ProductResponse>builder()
@@ -111,7 +113,7 @@ public class ProductController {
     }
 
     @DeleteMapping("{id}")
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommonResponse<String>> deleteById(@PathVariable String id) {
         productService.deleteById(id);
         CommonResponse<String> response = CommonResponse.<String>builder()

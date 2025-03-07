@@ -6,6 +6,7 @@ import com.fastcode.ecommerce.model.dto.request.UserRequest;
 import com.fastcode.ecommerce.model.dto.response.CommonResponse;
 import com.fastcode.ecommerce.model.dto.response.PagingResponse;
 import com.fastcode.ecommerce.model.dto.response.UserResponse;
+import com.fastcode.ecommerce.model.dto.response.UserResponseByToken;
 import com.fastcode.ecommerce.service.UserService;
 import com.fastcode.ecommerce.utils.validation.PagingUtil;
 import com.fastcode.ecommerce.utils.validation.SortingUtil;
@@ -69,6 +70,12 @@ public class UserController {
                 .status(HttpStatus.OK)
                 .header("Content-Type", "application/json")
                 .body(response);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseByToken> getUser(@RequestHeader("Authorization") String token) {
+        UserResponseByToken user = userService.getUserByToken(token);
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/{id}")
