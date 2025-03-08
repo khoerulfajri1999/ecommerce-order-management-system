@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class OrderController {
     private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'USER')")
     public ResponseEntity<CommonResponse<OrderResponse>> createOrder(
             @Valid @RequestBody OrderRequest orderRequest,
             HttpServletRequest request) {
@@ -50,6 +52,7 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<OrderResponse>> getOrderById(@PathVariable String id){
         OrderResponse orderResponse = orderService.getById(id);
         CommonResponse<OrderResponse> commonResponse = CommonResponse.<OrderResponse>builder()
@@ -61,6 +64,7 @@ public class OrderController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<List<OrderResponse>>> getAllOrderByUserId(
             @PathVariable (name = "userId") String userId,
             @RequestParam(required = false,defaultValue = "1") String page,
@@ -91,6 +95,54 @@ public class OrderController {
                 .totalPages(orders.getTotalPages())
                 .totalElement(orders.getTotalElements())
                 .page(searchRequest.getPage()+1)
+                .size(searchRequest.getSize())
+                .hashNext(orders.hasNext())
+                .hashPrevious(orders.hasPrevious())
+                .build();
+
+        CommonResponse<List<OrderResponse>> response = CommonResponse.<List<OrderResponse>>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("All orders retrieved")
+                .data(orders.getContent())
+                .paging(paging)
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .header("Content-Type", "application/json")
+                .body(response);
+    }
+
+    @GetMapping("/user")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'USER')")
+    public ResponseEntity<CommonResponse<List<OrderResponse>>> getAllOrderByUserLogin(
+            @RequestParam(required = false, defaultValue = "1") String page,
+            @RequestParam(required = false, defaultValue = "10") String size,
+            @RequestParam(required = false, defaultValue = "asc") String direction,
+            @RequestParam(required = false, defaultValue = "orderDate") String sortBy,
+            HttpServletRequest request
+    ) {
+
+        String token = request.getHeader("Authorization");
+
+        Integer safePage = PagingUtil.validatePage(page);
+        Integer safeSize = PagingUtil.validateSize(size);
+        direction = PagingUtil.validateDirection(direction);
+        sortBy = SortingUtil.sortByValidation(OrderResponse.class, sortBy, "orderDate");
+
+        SearchRequest searchRequest = SearchRequest.builder()
+                .page(Math.max(safePage - 1, 0))
+                .size(safeSize)
+                .direction(direction)
+                .sortBy(sortBy)
+                .build();
+
+        Page<OrderResponse> orders = orderService.getAllByUserToken(token, searchRequest);
+
+        PagingResponse paging = PagingResponse.builder()
+                .totalPages(orders.getTotalPages())
+                .totalElement(orders.getTotalElements())
+                .page(searchRequest.getPage() + 1)
                 .size(searchRequest.getSize())
                 .hashNext(orders.hasNext())
                 .hashPrevious(orders.hasPrevious())

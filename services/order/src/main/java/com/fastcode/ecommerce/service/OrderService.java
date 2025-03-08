@@ -10,6 +10,6 @@ public interface OrderService {
     OrderResponse create(OrderRequest orderRequest);
     OrderResponse getById(String orderId);
     Page<OrderResponse> getAllByUserId(SearchRequest request);
-
+    Page<OrderResponse> getAllByUserToken(String token, SearchRequest request);
 
 }

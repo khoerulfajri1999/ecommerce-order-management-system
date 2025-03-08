@@ -49,7 +49,6 @@ public class UserServiceImpl implements UserService {
     public UserResponse getById(String id) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(authentication.getPrincipal());
 
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));

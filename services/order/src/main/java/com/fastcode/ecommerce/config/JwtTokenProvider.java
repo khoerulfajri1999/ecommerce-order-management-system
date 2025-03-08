@@ -18,4 +18,5 @@ public class JwtTokenProvider {
     public void clearToken() {
         tokenHolder.remove();
     }
+
 }

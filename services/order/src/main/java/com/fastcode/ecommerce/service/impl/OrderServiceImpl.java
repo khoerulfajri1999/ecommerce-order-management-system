@@ -2,6 +2,7 @@ package com.fastcode.ecommerce.service.impl;
 
 import com.fastcode.ecommerce.client.product.ProductServiceClient;
 import com.fastcode.ecommerce.client.user.UserServiceClient;
+import com.fastcode.ecommerce.config.JwtTokenProvider;
 import com.fastcode.ecommerce.model.dto.request.OrderDetailRequest;
 import com.fastcode.ecommerce.model.dto.request.OrderRequest;
 import com.fastcode.ecommerce.model.dto.request.SearchRequest;
@@ -13,9 +14,11 @@ import com.fastcode.ecommerce.model.entity.Order;
 import com.fastcode.ecommerce.model.entity.OrderDetail;
 import com.fastcode.ecommerce.repository.OrderDetailRepository;
 import com.fastcode.ecommerce.repository.OrderRepository;
+import com.fastcode.ecommerce.service.JwtService;
 import com.fastcode.ecommerce.service.OrderService;
 import com.fastcode.ecommerce.utils.exceptions.RequestValidationException;
 import com.fastcode.ecommerce.utils.exceptions.ResourceNotFoundException;
+import com.fastcode.ecommerce.utils.exceptions.UnauthorizedException;
 import com.fastcode.ecommerce.utils.mapper.OrderMapper;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
@@ -119,4 +122,24 @@ public class OrderServiceImpl implements OrderService {
         );
         return orderRepository.findByUserId(request.getUserId(), pageRequest).map(orderMapper::mapOrderToResponse);
     }
+
+    @Override
+    public Page<OrderResponse> getAllByUserToken(String token, SearchRequest request) {
+
+        String userId = userServiceClient.getUserByToken(token).getId();
+        if (userId == null) {
+            throw new UnauthorizedException("Invalid or expired token");
+        }
+
+        PageRequest pageRequest = PageRequest.of(
+                request.getPage(),
+                request.getSize(),
+                Sort.by(Sort.Direction.fromString(request.getDirection()), request.getSortBy())
+        );
+        Page<Order> orders = orderRepository.findByUserId(userId, pageRequest);
+
+        return orders.map(orderMapper::mapOrderToResponse);
+    }
+
+
 }

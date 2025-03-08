@@ -3,6 +3,7 @@ package com.fastcode.ecommerce.controller.exceptions;
 import com.fastcode.ecommerce.model.dto.response.CommonResponse;
 import com.fastcode.ecommerce.utils.exceptions.RequestValidationException;
 import com.fastcode.ecommerce.utils.exceptions.ResourceNotFoundException;
+import com.fastcode.ecommerce.utils.exceptions.UnauthorizedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -40,12 +41,22 @@ public class GlobalExceptionController {
     }
 
     @ExceptionHandler({RequestValidationException.class})
-    public ResponseEntity<CommonResponse<String>> handleOutOfStockException(RequestValidationException ex) {
+    public ResponseEntity<CommonResponse<String>> handleRequestValidationException(RequestValidationException ex) {
         CommonResponse<String> response = CommonResponse.<String>builder()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
                 .message(ex.getMessage())
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler({UnauthorizedException.class})
+    public ResponseEntity<CommonResponse<String>> handleUnauthorizedException(UnauthorizedException ex) {
+        CommonResponse<String> response = CommonResponse.<String>builder()
+                .statusCode(HttpStatus.UNAUTHORIZED.value())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 }
