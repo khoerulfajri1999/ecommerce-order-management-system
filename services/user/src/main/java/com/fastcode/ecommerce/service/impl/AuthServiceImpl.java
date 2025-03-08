@@ -15,6 +15,7 @@ import com.fastcode.ecommerce.service.AuthService;
 import com.fastcode.ecommerce.service.JwtService;
 import com.fastcode.ecommerce.service.RoleService;
 import com.fastcode.ecommerce.service.UserService;
+import com.fastcode.ecommerce.utils.cache.RedisService;
 import com.fastcode.ecommerce.utils.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -41,6 +42,9 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
     private final JwtService jwtService;
+    private final RedisService redisService;
+
+    private static final String JWT_CACHE_PREFIX = "JWT_TOKEN_";
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -48,10 +52,8 @@ public class AuthServiceImpl implements AuthService {
         validateRegisterRequest(request);
         String hashedPassword = passwordEncoder.encode(request.getPassword());
 
-        // TODO: get or insert new Role
         Role userRole = roleService.getOrSave(UserRole.USER);
 
-        // TODO: insert new userAccount
         UserAccount userAccount = UserAccount.builder()
                 .username(request.getUsername())
                 .password(hashedPassword)
@@ -59,6 +61,7 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(true)
                 .build();
         userAccount = userAccountRepository.saveAndFlush(userAccount);
+
         User user = User.builder()
                 .email(request.getEmail())
                 .fullName(request.getFullName())
@@ -67,6 +70,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         UserRequest userRequest = userMapper.entityToRequest(user);
         userService.create(userRequest);
+
         return RegisterResponse.builder()
                 .userId(userAccount.getId())
                 .fullName(user.getFullName())
@@ -77,13 +81,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     @Override
     public RegisterResponse registerAdmin(RegisterRequest request) {
-        String hashedPassword = passwordEncoder.encode(request.getPassword());
         validateRegisterRequest(request);
-
-        // TODO: get or insert new Role
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
         Role userRole = roleService.getOrSave(UserRole.ADMIN);
 
-        // TODO: insert new userAccount
         UserAccount userAccount = UserAccount.builder()
                 .username(request.getUsername())
                 .password(hashedPassword)
@@ -91,6 +92,7 @@ public class AuthServiceImpl implements AuthService {
                 .isActive(true)
                 .build();
         userAccount = userAccountRepository.saveAndFlush(userAccount);
+
         User user = User.builder()
                 .email(request.getEmail())
                 .fullName(request.getFullName())
@@ -99,13 +101,13 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         UserRequest userRequest = userMapper.entityToRequest(user);
         userService.create(userRequest);
+
         return RegisterResponse.builder()
                 .userId(userAccount.getId())
                 .fullName(user.getFullName())
                 .roles(List.of(userRole.getRole().toString()))
                 .build();
     }
-
 
     @Override
     public LoginResponse login(AuthRequest request) {
@@ -131,6 +133,8 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(userAccount);
         System.out.println("Generated token successfully.");
 
+        redisService.saveData(JWT_CACHE_PREFIX + userAccount.getId(), token, 50);
+
         return LoginResponse.builder()
                 .userId(userAccount.getId())
                 .username(userAccount.getUsername())
@@ -150,5 +154,4 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Password must be at least 8 characters long.");
         }
     }
-
 }

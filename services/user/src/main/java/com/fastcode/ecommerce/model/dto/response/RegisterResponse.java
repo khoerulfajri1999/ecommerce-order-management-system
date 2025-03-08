@@ -1,14 +1,14 @@
 package com.fastcode.ecommerce.model.dto.response;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
 @Getter
 @Setter
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class RegisterResponse {
     private String userId;
     private String fullName;

@@ -10,6 +10,7 @@ import com.fastcode.ecommerce.model.entity.UserAccount;
 import com.fastcode.ecommerce.repository.UserAccountRepository;
 import com.fastcode.ecommerce.repository.UserRepository;
 import com.fastcode.ecommerce.service.UserService;
+import com.fastcode.ecommerce.utils.cache.RedisService;
 import com.fastcode.ecommerce.utils.exceptions.ResourceNotFoundException;
 import com.fastcode.ecommerce.utils.mapper.UserMapper;
 import com.fastcode.ecommerce.utils.specifications.UserSpecification;
@@ -31,10 +32,15 @@ public class UserServiceImpl implements UserService {
     private final UserAccountRepository userAccountRepository;
     private final UserMapper userMapper;
     private final JwtServiceImpl jwtService;
+    private final RedisService redisService;
+
+    private static final String USER_CACHE_PREFIX = "USER_";
+
     @Override
     public UserResponse create(UserRequest userRequest) {
         User user = userMapper.requestToEntity(userRequest);
         user = userRepository.save(user);
+        clearCache(user.getId());
         return userMapper.entityToResponse(user);
     }
 
@@ -47,32 +53,39 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getById(String id) {
+        String cacheKey = USER_CACHE_PREFIX + id;
+        UserResponse cachedUser = redisService.getData("USER_" + cacheKey, UserResponse.class);
+
+        if (cachedUser != null) {
+            return cachedUser;
+        }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ADMIN"));
 
-        UserAccount userAccount = userAccountRepository.findById(authentication.getPrincipal().toString()).orElseThrow(
-                () -> new ResourceNotFoundException("User not found")
-        );
+        UserAccount userAccount = userAccountRepository.findById(authentication.getPrincipal().toString())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        User user = userRepository.findByUserAccountId(userAccount.getId()).orElseThrow(
-                () -> new ResourceNotFoundException("User not found"));
+        User user = userRepository.findByUserAccountId(userAccount.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!isAdmin && !user.getId().equals(id)) {
             throw new AccessDeniedException("You are not allowed to access this user");
         }
 
-        return userMapper.entityToResponse(findByIdOrThrowNotFound(id));
+        UserResponse userResponse = userMapper.entityToResponse(findByIdOrThrowNotFound(id));
+        redisService.saveData(cacheKey, userResponse, 10);
+        return userResponse;
     }
-
 
     @Override
     public UserResponse updatePut(UserRequest userRequest) {
         findByIdOrThrowNotFound(userRequest.getId());
         User user = userMapper.requestToEntity(userRequest);
         user = userRepository.save(user);
+        clearCache(user.getId());
         return userMapper.entityToResponse(user);
     }
 
@@ -84,33 +97,40 @@ public class UserServiceImpl implements UserService {
         if (userRequest.getEmail() != null) existingUser.setEmail(userRequest.getEmail());
         if (userRequest.getPhone() != null) existingUser.setPhone(userRequest.getPhone());
 
-        return userMapper.entityToResponse(userRepository.saveAndFlush(existingUser));
+        existingUser = userRepository.saveAndFlush(existingUser);
+        clearCache(existingUser.getId());
+        return userMapper.entityToResponse(existingUser);
     }
 
     @Override
     public void deleteById(String id) {
         User existingUser = findByIdOrThrowNotFound(id);
         userRepository.delete(existingUser);
+        clearCache(id);
     }
 
     @Override
     public UserResponse deactivateUser(String id) {
         User existingUser = findByIdOrThrowNotFound(id);
-        if(!existingUser.getUserAccount().getIsActive() == false) {
+        if (!existingUser.getUserAccount().getIsActive()) {
             throw new IllegalArgumentException("User is already disabled");
         }
-        existingUser.getUserAccount().setIsActive(true);
-        return userMapper.entityToResponse(userRepository.saveAndFlush(existingUser));
+        existingUser.getUserAccount().setIsActive(false);
+        existingUser = userRepository.saveAndFlush(existingUser);
+        clearCache(existingUser.getId());
+        return userMapper.entityToResponse(existingUser);
     }
 
     @Override
     public UserResponse activateUser(String id) {
         User existingUser = findByIdOrThrowNotFound(id);
-        if(existingUser.getUserAccount().getIsActive() == true) {
+        if (existingUser.getUserAccount().getIsActive()) {
             throw new IllegalArgumentException("User is already active");
         }
         existingUser.getUserAccount().setIsActive(true);
-        return userMapper.entityToResponse(userRepository.saveAndFlush(existingUser));
+        existingUser = userRepository.saveAndFlush(existingUser);
+        clearCache(existingUser.getId());
+        return userMapper.entityToResponse(existingUser);
     }
 
     @Override
@@ -126,15 +146,17 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    private User findByIdOrThrowNotFound(String id){
+    private User findByIdOrThrowNotFound(String id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found")
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private User findByUserAccountIdOrThrowNotFound(String id){
+    private User findByUserAccountIdOrThrowNotFound(String id) {
         return userRepository.findByUserAccountId(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found")
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+    }
+
+    private void clearCache(String userId) {
+        redisService.deleteData(USER_CACHE_PREFIX + userId);
     }
 }

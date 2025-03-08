@@ -5,3 +5,5 @@ spring:
     name: product-service
   jackson:
     time-zone: Asia/Jakarta
+  serialization:
+    write-dates-as-timestamps: false
