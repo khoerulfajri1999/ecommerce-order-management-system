@@ -2,6 +2,7 @@ package com.fastcode.ecommerce.service.impl;
 
 import com.fastcode.ecommerce.model.dto.request.ProductRequest;
 import com.fastcode.ecommerce.model.dto.request.SearchRequest;
+import com.fastcode.ecommerce.model.dto.request.StockUpdateRequest;
 import com.fastcode.ecommerce.model.dto.response.CategoryResponse;
 import com.fastcode.ecommerce.model.dto.response.ProductResponse;
 import com.fastcode.ecommerce.model.entity.Category;
@@ -9,6 +10,7 @@ import com.fastcode.ecommerce.model.entity.Product;
 import com.fastcode.ecommerce.repository.CategoryRepository;
 import com.fastcode.ecommerce.repository.ProductRepository;
 import com.fastcode.ecommerce.service.ProductService;
+import com.fastcode.ecommerce.utils.exceptions.RequestValidationException;
 import com.fastcode.ecommerce.utils.exceptions.ResourceNotFoundException;
 import com.fastcode.ecommerce.utils.mapper.CategoryMapper;
 import com.fastcode.ecommerce.utils.specifications.ProductSpecification;
@@ -19,6 +21,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -115,6 +119,20 @@ public class ProductServiceImpl implements ProductService {
     public void deleteById(String id) {
         Product product = findBidOrThrowNotFound(id);
         productRepository.delete(product);
+    }
+
+    @Override
+    public void reduceStock(List<StockUpdateRequest> requests) {
+        for (StockUpdateRequest request : requests) {
+            Product product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Product with ID " + request.getProductId() + " not found"));
+
+            if (product.getStock() < request.getQty()) {
+                throw new RequestValidationException("Not enough stock for product: " + request.getProductId());
+            }
+            product.setStock(product.getStock() - request.getQty());
+            productRepository.save(product);
+        }
     }
 
     private Product findBidOrThrowNotFound(String id) {
