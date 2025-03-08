@@ -8,6 +8,7 @@ import com.fastcode.ecommerce.model.dto.response.CommonResponse;
 import com.fastcode.ecommerce.model.dto.response.PagingResponse;
 import com.fastcode.ecommerce.model.dto.response.ProductResponse;
 import com.fastcode.ecommerce.service.ProductService;
+import com.fastcode.ecommerce.utils.cache.RedisService;
 import com.fastcode.ecommerce.utils.validation.PagingUtil;
 import com.fastcode.ecommerce.utils.validation.SortingUtil;
 import jakarta.validation.Valid;
@@ -25,11 +26,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
+    private final RedisService redisService;
+
+    private static final String PRODUCT_CACHE_PREFIX = "PRODUCT_";
+    private static final String PRODUCT_LIST_CACHE = "PRODUCT_LIST";
+    private static final int CACHE_TTL = 60;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommonResponse<ProductResponse>> addNewProduct(@Valid @RequestBody ProductRequest payload) {
         ProductResponse product = productService.create(payload);
+
+        clearProductCache();
+
         CommonResponse<ProductResponse> response = CommonResponse.<ProductResponse>builder()
                 .statusCode(HttpStatus.CREATED.value())
                 .message("New product added!")
@@ -62,6 +71,15 @@ public class ProductController {
                 .sortBy(sortBy)
                 .build();
 
+        List<ProductResponse> cachedProducts = (List<ProductResponse>) redisService.getData(PRODUCT_LIST_CACHE);
+        if (cachedProducts != null) {
+            return ResponseEntity.ok(CommonResponse.<List<ProductResponse>>builder()
+                    .statusCode(HttpStatus.OK.value())
+                    .message("All products retrieved (from cache)")
+                    .data(cachedProducts)
+                    .build());
+        }
+
         Page<ProductResponse> products = productService.getAll(request);
         PagingResponse paging = PagingResponse.builder()
                 .totalPages(products.getTotalPages())
@@ -71,6 +89,8 @@ public class ProductController {
                 .hashNext(products.hasNext())
                 .hashPrevious(products.hasPrevious())
                 .build();
+
+        redisService.saveData(PRODUCT_LIST_CACHE, products.getContent(), CACHE_TTL);
 
         CommonResponse<List<ProductResponse>> response = CommonResponse.<List<ProductResponse>>builder()
                 .statusCode(HttpStatus.OK.value())
@@ -87,7 +107,21 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<ProductResponse>> getProductById(@PathVariable String id) {
+        String cacheKey = PRODUCT_CACHE_PREFIX + id;
+
+        ProductResponse cachedProduct = (ProductResponse) redisService.getData(cacheKey);
+        if (cachedProduct != null) {
+            return ResponseEntity.ok(CommonResponse.<ProductResponse>builder()
+                    .statusCode(HttpStatus.OK.value())
+                    .message("Product ID " + cachedProduct.getId() + " found! (from cache)")
+                    .data(cachedProduct)
+                    .build());
+        }
+
         ProductResponse product = productService.getById(id);
+
+        redisService.saveData(cacheKey, product, CACHE_TTL);
+
         CommonResponse<ProductResponse> response = CommonResponse.<ProductResponse>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("Product ID " + product.getId() + " found!")
@@ -103,6 +137,9 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommonResponse<ProductResponse>> updateProduct(@Valid @RequestBody ProductRequest payload) {
         ProductResponse product = productService.updatePut(payload);
+
+        clearProductCache();
+
         CommonResponse<ProductResponse> response = CommonResponse.<ProductResponse>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("Product with ID " + payload.getId() + " updated successfully.")
@@ -118,6 +155,9 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CommonResponse<String>> deleteById(@PathVariable String id) {
         productService.deleteById(id);
+
+        clearProductCache();
+
         CommonResponse<String> response = CommonResponse.<String>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("Product with ID " + id + " deleted successfully.")
@@ -132,5 +172,9 @@ public class ProductController {
     public ResponseEntity<Void> reduceStock(@RequestBody List<StockUpdateRequest> requests) {
         productService.reduceStock(requests);
         return ResponseEntity.ok().build();
+    }
+
+    private void clearProductCache() {
+        redisService.deleteData(PRODUCT_LIST_CACHE);
     }
 }

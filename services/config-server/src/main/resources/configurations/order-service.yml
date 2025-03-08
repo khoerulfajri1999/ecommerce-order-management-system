@@ -12,14 +12,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-
-#feign:
-#  client:
-#    config:
-#      user-service:
-#        url: http://user-service
-#      product-service:
-#        url: http://product-service
+  redis:
+    host: redis
+    port: 6379
+    password: ""
 
 app:
   fastcode:

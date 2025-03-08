@@ -1,4 +1,4 @@
-package com.fastcode.ecommerce.cache;
+package com.fastcode.ecommerce.utils.cache;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;

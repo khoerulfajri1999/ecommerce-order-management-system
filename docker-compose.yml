@@ -34,8 +34,22 @@ services:
     container_name: ms-mail-dev
     image: maildev/maildev
     ports:
-      - 1080:1080
-      - 1025:1025
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - microservices-net
+    restart: unless-stopped
+
+  redis:
+    container_name: ms_redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-net
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
 
 networks:
   microservices-net:
@@ -44,3 +58,4 @@ networks:
 volumes:
   postgres:
   pgadmin:
+  redis_data:

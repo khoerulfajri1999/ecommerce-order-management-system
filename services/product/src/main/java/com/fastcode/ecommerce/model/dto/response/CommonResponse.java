@@ -1,13 +1,13 @@
 package com.fastcode.ecommerce.model.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class CommonResponse<T> {
     private Integer statusCode;
     private String message;
