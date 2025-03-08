@@ -6,12 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "user-service", url = "${feign.client.config.user-service.url}")
+@FeignClient(name = "user-service")
 public interface UserServiceClient {
 
-    @GetMapping("/{id}")
+    @GetMapping("/api/v1/users/{id}")
     UserResponse getUserById(@PathVariable("id") String id);
 
-    @GetMapping("/me")
+    @GetMapping("/api/v1/users/me")
     UserResponse getUserByToken(@RequestHeader("Authorization") String token);
 }

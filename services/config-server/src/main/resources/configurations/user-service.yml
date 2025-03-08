@@ -19,3 +19,10 @@ app:
       jwt-secret: byH8Rd8FgnjKlxlNXY5vyn3oIkV+KY2dida4OYZFaCFyB3CI06ERaWBMg1eRZmMEqeofjILhDeJA2ag66MQ/Eg==
       app-name: ecommerce
       expired: 3600000  # dalam milidetik (1 jam)
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: false

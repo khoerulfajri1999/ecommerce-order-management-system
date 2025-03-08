@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(name = "product-service", url = "${feign.client.config.product-service.url}")
+@FeignClient(name = "product-service")
 public interface ProductServiceClient {
-    @GetMapping("{id}")
+    @GetMapping("/api/v1/products/{id}")
     CommonResponse<ProductResponse> getProductById(@PathVariable("id") String id);
 
-    @PutMapping("/reduce-stock")
+    @PutMapping("/api/v1/products/reduce-stock")
     void reduceStock(@RequestBody List<OrderDetailRequest> requests);
 }

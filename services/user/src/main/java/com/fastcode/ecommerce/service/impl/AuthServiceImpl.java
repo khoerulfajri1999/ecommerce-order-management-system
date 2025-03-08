@@ -74,6 +74,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public RegisterResponse registerAdmin(RegisterRequest request) {
         String hashedPassword = passwordEncoder.encode(request.getPassword());
