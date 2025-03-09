@@ -39,6 +39,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(req -> req
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET ,"/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT ,"/api/v1/products/reduce-stock").permitAll()
                         .requestMatchers(HttpMethod.GET ,"/api/v1/categories/**").permitAll()
                         .anyRequest().authenticated()
                 )

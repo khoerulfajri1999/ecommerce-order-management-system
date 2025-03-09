@@ -33,7 +33,7 @@ public class ProductController {
     private static final int CACHE_TTL = 60;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<ProductResponse>> addNewProduct(@Valid @RequestBody ProductRequest payload) {
         ProductResponse product = productService.create(payload);
 
@@ -134,7 +134,7 @@ public class ProductController {
     }
 
     @PutMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<ProductResponse>> updateProduct(@Valid @RequestBody ProductRequest payload) {
         ProductResponse product = productService.updatePut(payload);
 
@@ -152,7 +152,7 @@ public class ProductController {
     }
 
     @DeleteMapping("{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<String>> deleteById(@PathVariable String id) {
         productService.deleteById(id);
 

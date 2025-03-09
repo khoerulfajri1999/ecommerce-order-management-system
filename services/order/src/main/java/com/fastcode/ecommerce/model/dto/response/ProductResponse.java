@@ -1,14 +1,13 @@
 package com.fastcode.ecommerce.model.dto.response;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 @Getter
 @Setter
 @ToString
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ProductResponse {
     private String id;
     private String name;

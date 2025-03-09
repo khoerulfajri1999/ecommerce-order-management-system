@@ -37,6 +37,7 @@ public class JwtServiceImpl implements JwtService {
 
     @Override
     public boolean verifyJwtToken(String token) {
+        System.out.println(token);
         if (token == null || !token.startsWith("Bearer ")) {
             throw new IllegalArgumentException("Missing or malformed token");
         }
@@ -44,20 +45,21 @@ public class JwtServiceImpl implements JwtService {
         String jwtToken = token.substring(7);
         String cacheKey = JWT_CACHE_PREFIX + jwtToken;
 
-        Boolean cachedResult = (Boolean) redisService.getData(cacheKey);
-        if (cachedResult != null) {
-            return cachedResult;
+        Object cachedResult = redisService.getData(cacheKey);
+        if (cachedResult instanceof String) {
+            return Boolean.parseBoolean((String) cachedResult);
         }
 
         try {
             JWT.require(algorithm).withIssuer(appName).build().verify(jwtToken);
-            redisService.saveData(cacheKey, true, 15);
+            redisService.saveData(cacheKey, Boolean.TRUE.toString(), 15);
             return true;
         } catch (JWTVerificationException e) {
             redisService.deleteData(cacheKey);
             throw new JWTVerificationException("Invalid or expired token");
         }
     }
+
 
     @Override
     public JwtClaims getClaimsByToken(String token) {

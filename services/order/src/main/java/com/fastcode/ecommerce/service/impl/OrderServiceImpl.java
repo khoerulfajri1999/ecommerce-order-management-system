@@ -2,7 +2,6 @@ package com.fastcode.ecommerce.service.impl;
 
 import com.fastcode.ecommerce.client.product.ProductServiceClient;
 import com.fastcode.ecommerce.client.user.UserServiceClient;
-import com.fastcode.ecommerce.config.JwtTokenProvider;
 import com.fastcode.ecommerce.model.dto.request.OrderDetailRequest;
 import com.fastcode.ecommerce.model.dto.request.OrderRequest;
 import com.fastcode.ecommerce.model.dto.request.SearchRequest;
@@ -14,8 +13,8 @@ import com.fastcode.ecommerce.model.entity.Order;
 import com.fastcode.ecommerce.model.entity.OrderDetail;
 import com.fastcode.ecommerce.repository.OrderDetailRepository;
 import com.fastcode.ecommerce.repository.OrderRepository;
-import com.fastcode.ecommerce.service.JwtService;
 import com.fastcode.ecommerce.service.OrderService;
+import com.fastcode.ecommerce.utils.cache.RedisService;
 import com.fastcode.ecommerce.utils.exceptions.RequestValidationException;
 import com.fastcode.ecommerce.utils.exceptions.ResourceNotFoundException;
 import com.fastcode.ecommerce.utils.exceptions.UnauthorizedException;
@@ -41,27 +40,28 @@ public class OrderServiceImpl implements OrderService {
     private final UserServiceClient userServiceClient;
     private final ProductServiceClient productServiceClient;
     private final OrderMapper orderMapper;
+    private final RedisService redisService;
+    private static final long CACHE_TIMEOUT = 10;
 
     @Override
     @Transactional
     public OrderResponse create(OrderRequest orderRequest) {
-
         UserResponse user = userServiceClient.getUserById(orderRequest.getUserId());
         if (user == null) {
             throw new ResourceNotFoundException("User not found!");
         }
 
-        List <String> productId = orderRequest.getOrderDetails().stream().map(d -> d.getProductId()).collect(Collectors.toList());
-
-        productId.stream()
-                .map(id -> {
-                    try {
-                        return productServiceClient.getProductById(id);
-                    } catch (FeignException.NotFound e) {
-                        throw new ResourceNotFoundException("Product with ID " + id + " not found");
-                    }
-                })
+        List<String> productId = orderRequest.getOrderDetails().stream()
+                .map(OrderDetailRequest::getProductId)
                 .collect(Collectors.toList());
+
+        productId.forEach(id -> {
+            try {
+                productServiceClient.getProductById(id);
+            } catch (FeignException.NotFound e) {
+                throw new ResourceNotFoundException("Product with ID " + id + " not found");
+            }
+        });
 
         Date currentDate = new Date();
         Order order = new Order();
@@ -98,14 +98,25 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
         productServiceClient.reduceStock(stockUpdates);
 
-        return orderMapper.mapOrderToResponse(order);
+        OrderResponse response = orderMapper.mapOrderToResponse(order);
+        redisService.saveData("ORDER_" + order.getId(), response, CACHE_TIMEOUT);
+
+        return response;
     }
 
     @Override
     public OrderResponse getById(String orderId) {
+        OrderResponse cachedOrder = (OrderResponse) redisService.getData("ORDER_" + orderId);
+        if (cachedOrder != null) {
+            return cachedOrder;
+        }
+
         Order order = orderRepository.findById(orderId).orElseThrow(
                 () -> new ResourceNotFoundException("Order not found"));
-        return orderMapper.mapOrderToResponse(order);
+        OrderResponse response = orderMapper.mapOrderToResponse(order);
+        redisService.saveData("ORDER_" + orderId, response, CACHE_TIMEOUT);
+
+        return response;
     }
 
     @Override
@@ -125,7 +136,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<OrderResponse> getAllByUserToken(String token, SearchRequest request) {
-
         String userId = userServiceClient.getUserByToken(token).getId();
         if (userId == null) {
             throw new UnauthorizedException("Invalid or expired token");
@@ -140,6 +150,6 @@ public class OrderServiceImpl implements OrderService {
 
         return orders.map(orderMapper::mapOrderToResponse);
     }
-
-
 }
+
+
