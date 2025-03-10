@@ -1,4 +1,7 @@
+version: '3.8'
+
 services:
+  # PostgreSQL Database
   postgresql:
     container_name: ms_pg_sql
     image: postgres
@@ -15,6 +18,7 @@ services:
       - microservices-net
     restart: unless-stopped
 
+  # pgAdmin
   pgadmin:
     container_name: ms_pgadmin
     image: dpage/pgadmin4
@@ -30,16 +34,7 @@ services:
       - microservices-net
     restart: unless-stopped
 
-  mail-dev:
-    container_name: ms-mail-dev
-    image: maildev/maildev
-    ports:
-      - "1080:1080"
-      - "1025:1025"
-    networks:
-      - microservices-net
-    restart: unless-stopped
-
+  # Redis Cache
   redis:
     container_name: ms_redis
     image: redis:latest
@@ -49,6 +44,107 @@ services:
       - microservices-net
     volumes:
       - redis_data:/data
+    restart: unless-stopped
+
+  # Config Server
+  config-server:
+    container_name: ms_config_server
+    build:
+      context: ./services/config-server
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    restart: unless-stopped
+
+  # Eureka Discovery Server
+  discovery-server:
+    container_name: ms_discovery_server
+    build:
+      context: ./services/discovery-server
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - config-server
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    container_name: ms_api_gateway
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - microservices-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - DISCOVERY_SERVER_URL=http://discovery-server:8761
+    depends_on:
+      - config-server
+      - discovery-server
+    restart: unless-stopped
+
+  # User Service
+  user-service:
+    container_name: ms_user_service
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    networks:
+      - microservices-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - DATABASE_URL=jdbc:postgresql://postgresql:5432/user
+      - DATABASE_USER=fastcode
+      - DATABASE_PASSWORD=12345
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EUREKA_SERVER=http://discovery-server:8761/eureka
+    depends_on:
+      - config-server
+      - postgresql
+      - redis
+      - discovery-server
+    restart: unless-stopped
+
+  # Product Service
+  product-service:
+    container_name: ms_product_service
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    ports:
+      - "8050:8050"
+    networks:
+      - microservices-net
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - DATABASE_URL=jdbc:postgresql://postgresql:5432/product
+      - DATABASE_USER=fastcode
+      - DATABASE_PASSWORD=12345
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - EUREKA_SERVER=http://discovery-server:8761/eureka
+    depends_on:
+      - config-server
+      - postgresql
+      - redis
+      - discovery-server
     restart: unless-stopped
 
 networks:
