@@ -10,6 +10,7 @@ import com.fastcode.ecommerce.model.dto.response.UserResponseByToken;
 import com.fastcode.ecommerce.service.UserService;
 import com.fastcode.ecommerce.utils.validation.PagingUtil;
 import com.fastcode.ecommerce.utils.validation.SortingUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@SecurityRequirement(name = "Bearer Authentication")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = APIUrl.USER_API)

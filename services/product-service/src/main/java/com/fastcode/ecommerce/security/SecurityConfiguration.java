@@ -38,6 +38,8 @@ public class SecurityConfiguration {
                 .sessionManagement(cfg -> cfg.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(req -> req
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET ,"/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.PUT ,"/api/v1/products/reduce-stock").permitAll()
                         .requestMatchers(HttpMethod.GET ,"/api/v1/categories/**").permitAll()

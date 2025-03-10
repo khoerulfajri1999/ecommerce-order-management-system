@@ -5,7 +5,7 @@ import com.fastcode.ecommerce.model.dto.request.CategoryRequest;
 import com.fastcode.ecommerce.model.dto.response.CategoryResponse;
 import com.fastcode.ecommerce.model.dto.response.CommonResponse;
 import com.fastcode.ecommerce.service.CategoryService;
-import com.fastcode.ecommerce.utils.cache.RedisService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,24 +16,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/categories")
+@RequestMapping(APIUrl.CATEGORY_API)
 @RequiredArgsConstructor
 public class CategoryController {
 
     private final CategoryService categoryService;
-    private final RedisService redisService;
 
-    private static final String CATEGORY_CACHE_PREFIX = "CATEGORY_";
-    private static final String CATEGORY_LIST_CACHE = "CATEGORY_LIST";
-    private static final int CACHE_TTL = 60;
-
+    @SecurityRequirement(name = "Bearer Authentication")
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<CategoryResponse>> addNewCategory(@Valid @RequestBody CategoryRequest request) {
         CategoryResponse category = categoryService.create(request);
-
-        clearCategoryCache();
-
         CommonResponse<CategoryResponse> response = CommonResponse.<CategoryResponse>builder()
                 .statusCode(HttpStatus.CREATED.value())
                 .message("New category added")
@@ -48,9 +41,7 @@ public class CategoryController {
 
     @GetMapping
     public ResponseEntity<CommonResponse<List<CategoryResponse>>> getAllCategory() {
-
         List<CategoryResponse> categories = categoryService.getAll();
-
         CommonResponse<List<CategoryResponse>> response = CommonResponse.<List<CategoryResponse>>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("All categories retrieved")
@@ -68,7 +59,6 @@ public class CategoryController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<CategoryResponse>> updateCategory(@Valid @RequestBody CategoryRequest payload) {
         CategoryResponse category = categoryService.updatePut(payload);
-        clearCategoryCache();
         CommonResponse<CategoryResponse> response = CommonResponse.<CategoryResponse>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("Category with ID " + payload.getId() + " updated successfully.")
@@ -82,20 +72,7 @@ public class CategoryController {
 
     @GetMapping("/{id}")
     public ResponseEntity<CommonResponse<CategoryResponse>> getCategoryById (@PathVariable String id) {
-        String cacheKey = CATEGORY_CACHE_PREFIX + id;
-
-        CategoryResponse cachedCategory = (CategoryResponse) redisService.getData(cacheKey);
-        if (cachedCategory != null) {
-            return ResponseEntity.ok(CommonResponse.<CategoryResponse>builder()
-                    .statusCode(HttpStatus.OK.value())
-                    .message("Category retrieved (from cache)")
-                    .data(cachedCategory)
-                    .build());
-        }
-
         CategoryResponse category = categoryService.getById(id);
-        redisService.saveData(cacheKey, category, CACHE_TTL);
-
         CommonResponse<CategoryResponse> response = CommonResponse.<CategoryResponse>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("Category retrieved")
@@ -112,8 +89,6 @@ public class CategoryController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<CommonResponse<String>> deleteById(@PathVariable String id){
         categoryService.deleteById(id);
-        clearCategoryCache();
-
         CommonResponse<String> response = CommonResponse.<String>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("Category deleted successfully")
@@ -124,9 +99,5 @@ public class CategoryController {
                 .status(HttpStatus.OK)
                 .header("Content-Type", "application/json")
                 .body(response);
-    }
-
-    private void clearCategoryCache() {
-        redisService.deleteData(CATEGORY_LIST_CACHE);
     }
 }
